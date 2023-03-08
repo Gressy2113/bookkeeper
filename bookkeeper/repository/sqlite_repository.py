@@ -15,13 +15,23 @@ class SQLiteRepository(AbstractRepository[T]):
     Репозиторий, работающий в базе данных sqlite. Хранит данные в базе данных.
     """
 
-    def __init__(
-        self, db_file: str, cls: type
-    ) -> None:  # TODO : создание таблиц, если они не существуют
+    def __init__(self, db_file: str, cls: type) -> None:
         self.db_file = db_file
         self.table_name = cls.__name__.lower()
         self.fields = get_annotations(cls, eval_str=True)
         self.fields.pop("pk")
+        with sqlite3.connect(self.db_file) as con:
+            cur = con.cursor()
+            res = cur.execute("SELECT name FROM sqlite_master")
+            db_tables = [t[0].lower() for t in res.fetchall()]
+            if self.table_name not in db_tables:
+                col_names = ", ".join(self.fields.keys())
+                q = (
+                    f"CREATE TABLE {self.table_name} ("
+                    f'"pk" INTEGER PRIMARY KEY AUTOINCREMENT, {col_names})'
+                )
+                cur.execute(q)
+        con.close()
 
     def add(self, obj: T) -> int:
         """Добавить объект"""
@@ -32,7 +42,6 @@ class SQLiteRepository(AbstractRepository[T]):
             cur = con.cursor()
             cur.execute("PRAGMA foreign_keys = ON")
             cur.execute(f"INSERT INTO {self.table_name} ({names}) VALUES ({p})", values)
-
             pk = cur.lastrowid
             assert isinstance(pk, int)
             obj.pk = pk
@@ -40,18 +49,20 @@ class SQLiteRepository(AbstractRepository[T]):
         con.close()
         return obj.pk
 
-    def __tuple_to_T(self, res):
-        if self.table_name == "category":
-            return Category(*res)
-        return Expense(*res)
+    # def __tuple_to_T(self, res):
+    #     if self.table_name == "category":
+    #         return Category(*res)
+    #     return Expense(*res)
 
     def get(self, pk: int) -> T | None:
         """Получить объект по id"""
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
             cur.execute(f"SELECT * FROM {self.table_name} WHERE pk=({pk})")
-            res = self.__tuple_to_T(cur.fetchone())
+            res = cur.fetchone()
+            # self.__tuple_to_T(cur.fetchone())
         con.close()
+        
         return res
 
     def get_all(self, where: dict[str, Any] | None = None) -> list[T]:
@@ -77,7 +88,8 @@ class SQLiteRepository(AbstractRepository[T]):
 
             cur.execute(request)
 
-            res = [self.__tuple_to_T(cur_res) for cur_res in cur.fetchall()]
+            res = cur.fetchall()
+            # [self.__tuple_to_T(cur_res) for cur_res in cur.fetchall()]
             # print(res)
         con.close()
         return res

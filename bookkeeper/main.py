@@ -6,7 +6,7 @@ from bookkeeper.models.expense import Expense
 from bookkeeper.repository.sqlite_repository import SQLiteRepository
 import sys
 
-DB_NAME = "test.db"
+DB_NAME = "test_new.db"
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

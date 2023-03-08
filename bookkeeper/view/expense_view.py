@@ -6,14 +6,28 @@ from PySide6.QtWidgets import (
     QComboBox,
     QLineEdit,
     QPushButton,
+    QTableView,
 )
-from PySide6 import QtCore, QtWidgets
+
+from PySide6.QtCore import Qt
+
+from PySide6.QtGui import QStandardItem, QStandardItemModel
+
+from PySide6 import QtCore, QtWidgets, QtGui
+
+from bookkeeper.view.category import EditCategoryWindow
 
 
 class TableModel(QtCore.QAbstractTableModel):
     def __init__(self, data):
         super(TableModel, self).__init__()
         self._data = data
+        self.horizontalHeaders = [""] * 4
+
+        self.setHeaderData(0, Qt.Horizontal, "Driver")
+        self.setHeaderData(1, Qt.Horizontal, "Range")
+        self.setHeaderData(2, Qt.Horizontal, "Driven")
+        self.setHeaderData(3, Qt.Horizontal, "Range")
 
     def data(self, index, role):
         if role == QtCore.Qt.DisplayRole:
@@ -31,6 +45,23 @@ class TableModel(QtCore.QAbstractTableModel):
         # the length (only works if all rows are an equal length)
         return len(self._data[0])
 
+    def setHeaderData(self, section, orientation, data, role=Qt.EditRole):
+        if orientation == Qt.Horizontal and role in (Qt.DisplayRole, Qt.EditRole):
+            try:
+                self.horizontalHeaders[section] = data
+                return True
+            except:
+                return False
+        return super().setHeaderData(section, orientation, data, role)
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+            try:
+                return self.horizontalHeaders[section]
+            except:
+                pass
+        return super().headerData(section, orientation, role)
+
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
@@ -43,13 +74,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
         ###########################################################
         self.layout.addWidget(QLabel("Последние расходы"))
-
-        self.expenses_grid = QtWidgets.QTableView()
+        self.expenses_grid = QTableView()
         self.layout.addWidget(self.expenses_grid)
 
         ##########################################################
         self.layout.addWidget(QLabel("Бюджет"))
-
         self.budget_grid = QtWidgets.QTableView()
         self.layout.addWidget(self.budget_grid)
         # QLabel("<TODO: таблица бюджета>\n\n\n\n\n\n\n\n"))
@@ -87,28 +116,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(self.widget)
 
     def set_expense_table(self, data):
-        self.item_model = TableModel(data)
-        self.expenses_grid.setModel(self.item_model)
-        self.expenses_grid.resizeColumnsToContents()
-        grid_width = sum(
-            [
-                self.expenses_grid.columnWidth(x)
-                for x in range(0, self.item_model.columnCount(0) + 1)
-            ]
-        )
-        self.setFixedSize(grid_width + 80, 600)
-
-    def set_budget_table(self, data):
-        self.item_model = TableModel(data)
-        self.budget_grid.setModel(self.item_model)
-        self.budget_grid.resizeColumnsToContents()
-        grid_width = sum(
-            [
-                self.budget_grid.columnWidth(x)
-                for x in range(0, self.item_model.columnCount(0) + 1)
-            ]
-        )
-        self.setFixedSize(grid_width + 80, 600)
+        if data:
+            self.item_model = TableModel(data)
+            self.expenses_grid.setModel(self.item_model)
+            self.expenses_grid.resizeColumnsToContents()
+            grid_width = sum(
+                [
+                    self.expenses_grid.columnWidth(x)
+                    for x in range(0, self.item_model.columnCount(0) + 1)
+                ]
+            )
+            self.setFixedSize(grid_width + 80, 600)
 
     def set_category_dropdown(self, data):
         for tup in data:
@@ -122,3 +140,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def get_selected_cat(self) -> int:
         return self.category_dropdown.itemData(self.category_dropdown.currentIndex())
+
+    def on_category_edit_button_clicked(self, slot):
+        self.category_edit_button.clicked.connect(slot)
