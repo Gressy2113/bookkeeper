@@ -5,6 +5,8 @@
 import sqlite3
 from inspect import get_annotations
 from typing import Any
+from bookkeeper.models.category import Category
+from bookkeeper.models.expense import Expense
 from bookkeeper.repository.abstract_repository import AbstractRepository, T
 
 
@@ -13,7 +15,9 @@ class SQLiteRepository(AbstractRepository[T]):
     Репозиторий, работающий в базе данных sqlite. Хранит данные в базе данных.
     """
 
-    def __init__(self, db_file: str, cls: type) -> None:
+    def __init__(
+        self, db_file: str, cls: type
+    ) -> None:  # TODO : создание таблиц, если они не существуют
         self.db_file = db_file
         self.table_name = cls.__name__.lower()
         self.fields = get_annotations(cls, eval_str=True)
@@ -36,12 +40,17 @@ class SQLiteRepository(AbstractRepository[T]):
         con.close()
         return obj.pk
 
+    def __tuple_to_T(self, res):
+        if self.table_name == "category":
+            return Category(*res)
+        return Expense(*res)
+
     def get(self, pk: int) -> T | None:
         """Получить объект по id"""
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
             cur.execute(f"SELECT * FROM {self.table_name} WHERE pk=({pk})")
-            res = cur.fetchone()
+            res = self.__tuple_to_T(cur.fetchone())
         con.close()
         return res
 
@@ -67,8 +76,9 @@ class SQLiteRepository(AbstractRepository[T]):
                 request += ")"
 
             cur.execute(request)
-            res = cur.fetchall()
 
+            res = [self.__tuple_to_T(cur_res) for cur_res in cur.fetchall()]
+            # print(res)
         con.close()
         return res
 
