@@ -6,35 +6,35 @@ from PySide6.QtWidgets import (
     QComboBox,
     QLineEdit,
     QPushButton,
-    QTableView,
+    QHeaderView,
 )
 
-from PySide6.QtCore import Qt
+from PySide6 import QtCore, QtGui, QtWidgets
 
-from PySide6.QtGui import QStandardItem, QStandardItemModel
 
-from PySide6 import QtCore, QtWidgets, QtGui
-
-from bookkeeper.view.category import EditCategoryWindow
+# from bookkeeper.view.budget_view import BudgetTable
+from bookkeeper.view.categories_view import CategoryDialog
 
 
 class TableModel(QtCore.QAbstractTableModel):
     def __init__(self, data):
         super(TableModel, self).__init__()
         self._data = data
-        self.horizontalHeaders = [""] * 4
+        # print(data)
+        self.header_names = list(data[0].__dataclass_fields__.keys())
 
-        self.setHeaderData(0, Qt.Horizontal, "Driver")
-        self.setHeaderData(1, Qt.Horizontal, "Range")
-        self.setHeaderData(2, Qt.Horizontal, "Driven")
-        self.setHeaderData(3, Qt.Horizontal, "Range")
+    def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
+        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
+            return self.header_names[section]
+        return super().headerData(section, orientation, role)
 
     def data(self, index, role):
         if role == QtCore.Qt.DisplayRole:
             # See below for the nested-list data structure.
             # .row() indexes into the outer list,
             # .column() indexes into the sub-list
-            return self._data[index.row()][index.column()]
+            fields = list(self._data[index.row()].__dataclass_fields__.keys())
+            return self._data[index.row()].__getattribute__(fields[index.column()])
 
     def rowCount(self, index):
         # The length of the outer list.
@@ -43,24 +43,7 @@ class TableModel(QtCore.QAbstractTableModel):
     def columnCount(self, index):
         # The following takes the first sub-list, and returns
         # the length (only works if all rows are an equal length)
-        return len(self._data[0])
-
-    def setHeaderData(self, section, orientation, data, role=Qt.EditRole):
-        if orientation == Qt.Horizontal and role in (Qt.DisplayRole, Qt.EditRole):
-            try:
-                self.horizontalHeaders[section] = data
-                return True
-            except:
-                return False
-        return super().setHeaderData(section, orientation, data, role)
-
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            try:
-                return self.horizontalHeaders[section]
-            except:
-                pass
-        return super().headerData(section, orientation, role)
+        return len(self._data[0].__dataclass_fields__)
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -72,18 +55,17 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.layout = QVBoxLayout()
 
-        ###########################################################
         self.layout.addWidget(QLabel("Последние расходы"))
-        self.expenses_grid = QTableView()
+
+        self.expenses_grid = QtWidgets.QTableView()
         self.layout.addWidget(self.expenses_grid)
 
-        ##########################################################
         self.layout.addWidget(QLabel("Бюджет"))
-        self.budget_grid = QtWidgets.QTableView()
-        self.layout.addWidget(self.budget_grid)
-        # QLabel("<TODO: таблица бюджета>\n\n\n\n\n\n\n\n"))
 
-        ############################################################
+        self.budget_grid = QtWidgets.QTableView()
+
+        self.layout.addWidget(self.budget_grid)
+
         self.bottom_controls = QGridLayout()
 
         self.bottom_controls.addWidget(QLabel("Сумма"), 0, 0)
@@ -101,6 +83,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.category_edit_button = QPushButton("Редактировать")
         self.bottom_controls.addWidget(self.category_edit_button, 1, 2)
+        self.category_edit_button.clicked.connect(self.show_cats_dialog)
 
         self.expense_add_button = QPushButton("Добавить")
         self.bottom_controls.addWidget(self.expense_add_button, 2, 1)
@@ -119,6 +102,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if data:
             self.item_model = TableModel(data)
             self.expenses_grid.setModel(self.item_model)
+            self.expenses_grid.hideColumn(self.item_model.header_names.index("pk"))
             self.expenses_grid.resizeColumnsToContents()
             grid_width = sum(
                 [
@@ -126,11 +110,21 @@ class MainWindow(QtWidgets.QMainWindow):
                     for x in range(0, self.item_model.columnCount(0) + 1)
                 ]
             )
-            self.setFixedSize(grid_width + 80, 600)
+            self.setFixedSize(grid_width + 60, 600)
+
+    def set_budget_table(self, data):
+        if data:
+            self.item_model = TableModel(data)
+            self.budget_grid.setModel(self.item_model)
+            self.budget_grid.hideColumn(self.item_model.header_names.index("pk"))
+
+            self.budget_grid.horizontalHeader().setSectionResizeMode(
+                0, QHeaderView.Stretch
+            )
 
     def set_category_dropdown(self, data):
-        for tup in data:
-            self.category_dropdown.addItem(tup[1], tup[0])
+        for c in data:
+            self.category_dropdown.addItem(c.name, c.pk)
 
     def on_expense_add_button_clicked(self, slot):
         self.expense_add_button.clicked.connect(slot)
@@ -138,8 +132,26 @@ class MainWindow(QtWidgets.QMainWindow):
     def get_amount(self) -> float:
         return float(self.amount_line_edit.text())  # TODO: обработка исключений
 
+    # def renameSection(self, index):
+    #     oldTitle = self.model.headerData(
+    #         index, QtCore.Qt.Horizontal, QtCore.Qt.DisplayRole)
+
+    #     newTitle, accepted = QtWidgets.QInputDialog.getText(
+    #         self, 'Change column title', oldTitle)
+
+    #     if accepted and oldTitle != newTitle:
+    #         self.model.setHeaderData(
+    #             index, QtCore.Qt.Horizontal, newTitle, QtCore.Qt.DisplayRole)
+
     def get_selected_cat(self) -> int:
         return self.category_dropdown.itemData(self.category_dropdown.currentIndex())
 
     def on_category_edit_button_clicked(self, slot):
         self.category_edit_button.clicked.connect(slot)
+
+    def show_cats_dialog(self, data):
+        if data:
+            cat_dlg = CategoryDialog(data)
+            cat_dlg.setWindowTitle("Редактирование категорий")
+            cat_dlg.setGeometry(300, 100, 600, 300)
+            cat_dlg.exec_()

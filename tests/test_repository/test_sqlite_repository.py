@@ -1,24 +1,40 @@
-# from bookkeeper.models.category import Category
 from bookkeeper.repository.sqlite_repository import SQLiteRepository
-
-# cat_repo = SQLiteRepository[Category]("tests/test.db", Category)
-# all_ = cat_repo.get_all({'parent' : '1', 'name' : 'мясо', 'pk': 2})
-# for i in all_:
-#     print(i)
-# cat_repo.delete(7)
-# print(cat_repo.get_all())
-
+from dataclasses import dataclass
 import pytest
+
+DB_NAME = "test.db"
 
 
 @pytest.fixture
 def custom_class():
+    @dataclass
     class Custom:
-        pk = 0
+        pk: int = 0
+        test_field: str = "abc"
 
     return Custom
 
 
 @pytest.fixture
-def repo():
-    return SQLiteRepository()
+def repo(custom_class):
+    return SQLiteRepository(DB_NAME, custom_class)
+
+
+def test_add_and_get(repo, custom_class):
+    obj = custom_class()
+    pk = repo.add(obj)
+    o = repo.get(5555)
+    assert obj.pk == pk
+    assert repo.get(pk) == obj
+    assert o is None
+
+
+# def test_get_all(repo, custom_class):
+#     obj = custom_class()
+#     pk = repo.add(obj)
+
+#     oall = repo.get_all()
+#     for o in oall:
+#         assert obj.pk == pk
+#         assert repo.get(pk) == obj
+#         assert o is None

@@ -5,8 +5,7 @@
 import sqlite3
 from inspect import get_annotations
 from typing import Any
-from bookkeeper.models.category import Category
-from bookkeeper.models.expense import Expense
+from bookkeeper.models.budget import Budget
 from bookkeeper.repository.abstract_repository import AbstractRepository, T
 
 
@@ -18,6 +17,7 @@ class SQLiteRepository(AbstractRepository[T]):
     def __init__(self, db_file: str, cls: type) -> None:
         self.db_file = db_file
         self.table_name = cls.__name__.lower()
+        self.cls = cls
         self.fields = get_annotations(cls, eval_str=True)
         self.fields.pop("pk")
         with sqlite3.connect(self.db_file) as con:
@@ -32,6 +32,7 @@ class SQLiteRepository(AbstractRepository[T]):
                 )
                 cur.execute(q)
         con.close()
+        # self.create_update_budget_table()
 
     def add(self, obj: T) -> int:
         """Добавить объект"""
@@ -45,14 +46,15 @@ class SQLiteRepository(AbstractRepository[T]):
             pk = cur.lastrowid
             assert isinstance(pk, int)
             obj.pk = pk
-
         con.close()
         return obj.pk
 
-    # def __tuple_to_T(self, res):
-    #     if self.table_name == "category":
-    #         return Category(*res)
-    #     return Expense(*res)
+    def __generate_object(self, db_row: tuple) -> T:
+        obj = self.cls(self.fields)
+        for field, value in zip(self.fields, db_row[1:]):
+            setattr(obj, field, value)
+        obj.pk = db_row[0]
+        return obj
 
     def get(self, pk: int) -> T | None:
         """Получить объект по id"""
@@ -60,10 +62,12 @@ class SQLiteRepository(AbstractRepository[T]):
             cur = con.cursor()
             cur.execute(f"SELECT * FROM {self.table_name} WHERE pk=({pk})")
             res = cur.fetchone()
-            # self.__tuple_to_T(cur.fetchone())
         con.close()
-        
-        return res
+
+        if res is None:
+            return None
+
+        return self.__generate_object(res)
 
     def get_all(self, where: dict[str, Any] | None = None) -> list[T]:
         """
@@ -89,17 +93,18 @@ class SQLiteRepository(AbstractRepository[T]):
             cur.execute(request)
 
             res = cur.fetchall()
-            # [self.__tuple_to_T(cur_res) for cur_res in cur.fetchall()]
-            # print(res)
         con.close()
-        return res
+
+        if not res:
+            return []
+
+        return [self.__generate_object(row) for row in res]
 
     def update(self, obj: T) -> None:
         """Обновить данные об объекте. Объект должен содержать поле pk."""
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
-            cur.execute(f"UPDATE * FROM {self.table_name}")
-            # res = cur.fetchall()
+            cur.execute(f"UPDATE * FROM {self.table_name} WHERE pk={obj.pk}")
         con.close()
 
     def delete(self, pk: int) -> None:
@@ -108,5 +113,32 @@ class SQLiteRepository(AbstractRepository[T]):
             cur = con.cursor()
             cur.execute("PRAGMA foreign_keys = ON")
             cur.execute(f"DELETE FROM {self.table_name} WHERE pk={pk}")
-        # cur.rowcount
         con.close()
+
+
+class Budget_Table(SQLiteRepository):
+    def create_update_budget_table(self):
+        intervals = ["День", "Неделя", "Месяц"]
+        patterns = [
+            "datetime('now', 'start of day')",
+            "date('now', 'Weekday 1', '-7 days')",
+            "datetime('now', 'start of month')",
+        ]
+
+        for interval, pattern in zip(intervals, patterns):
+            with sqlite3.connect(self.db_file) as con:
+                cur = con.cursor()
+                cur.execute(f"SELECT * FROM budget WHERE interval='{interval}'")
+                ispresent = cur.fetchone()
+                cur.execute(
+                    f"SELECT amount FROM Expense WHERE expense_date >= {pattern}"
+                )
+                ams = cur.fetchall()
+                summ = sum([float(am[0]) for am in ams])
+                if ispresent is None:
+                    self.add(Budget(interval=interval, summ=summ, budget=0, pk=0))
+                else:
+                    cur.execute(
+                        f"UPDATE budget SET summ={summ} WHERE interval='{interval}'"
+                    )
+            con.close()

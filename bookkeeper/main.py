@@ -3,10 +3,11 @@ from bookkeeper.view.expense_view import MainWindow
 from bookkeeper.presenter.expense_presenter import ExpensePresenter
 from bookkeeper.models.category import Category
 from bookkeeper.models.expense import Expense
-from bookkeeper.repository.sqlite_repository import SQLiteRepository
+from bookkeeper.models.budget import Budget
+from bookkeeper.repository.sqlite_repository import SQLiteRepository, Budget_Table
 import sys
 
-DB_NAME = "test_new.db"
+DB_NAME = "test.db"
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
@@ -16,9 +17,7 @@ if __name__ == "__main__":
 
     cat_repo = SQLiteRepository[Category](DB_NAME, Category)
     exp_repo = SQLiteRepository[Expense](DB_NAME, Expense)
-
-    window = ExpensePresenter(
-        model, view, cat_repo, exp_repo
-    )  # TODO: передать три репозитория
+    budget_repo = Budget_Table(DB_NAME, Budget)
+    window = ExpensePresenter(model, view, cat_repo, exp_repo, budget_repo)
     window.show()
     app.exec_()
