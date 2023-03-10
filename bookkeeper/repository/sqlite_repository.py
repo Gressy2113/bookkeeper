@@ -160,10 +160,10 @@ class BudgetTable(SQLiteRepository):
                     )
             con.close()
 
-    # def update_budget(self, ind, value):
-    #     with sqlite3.connect(self.db_file) as con:
-    #         cur = con.cursor()
-    #         cur.execute(
-    #             f"UPDATE budget SET budget = {value} WHERE interval = {self.intervals[ind]}"
-    #         )
-    #     con.close()
+    def update_budget(self, ind, value):
+        with sqlite3.connect(self.db_file) as con:
+            cur = con.cursor()
+            cur.execute(
+                f"UPDATE budget SET budget = {value} WHERE interval = '{self.intervals[ind]}'"
+            )
+        con.close()

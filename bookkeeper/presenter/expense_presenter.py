@@ -17,12 +17,19 @@ class ExpensePresenter:
             self.handle_expense_delete_button_clicked
         )
 
+        self.view.on_budget_day_button_clicked(self.handle_budget_day_button_clicked)
+        self.view.on_budget_week_button_clicked(self.handle_budget_week_button_clicked)
+        self.view.on_budget_month_button_clicked(
+            self.handle_budget_month_button_clicked
+        )
+
         self.view.on_category_edit_button_clicked(
             self.handle_category_edit_button_clicked
         )
-        self.view.on_category_edit_button_clicked(
-            self.handle_category_edit_button_clicked
-        )
+
+        # self.view.on_category_edit_button_clicked(
+        #     self.handle_category_edit_button_clicked
+        # )
 
     def update_expense_data(self):
         self.exp_data = self.exp_repo.get_all()
@@ -63,8 +70,20 @@ class ExpensePresenter:
             self.update_expense_data()
             self.update_budget_data()
 
-    # def handle_budget_edit_clicked(self) -> None:
-    #     value = self.view.get_
+    def handle_budget_day_button_clicked(self) -> None:
+        value = self.view.get_day_budget()
+        self.bud_repo.update_budget(0, value)
+        self.update_budget_data()
+
+    def handle_budget_week_button_clicked(self) -> None:
+        value = self.view.get_week_budget()
+        self.bud_repo.update_budget(1, value)
+        self.update_budget_data()
+
+    def handle_budget_month_button_clicked(self) -> None:
+        value = self.view.get_month_budget()
+        self.bud_repo.update_budget(2, value)
+        self.update_budget_data()
 
     def handle_category_edit_button_clicked(self):
         self.view.show_cats_dialog(self.cat_data)

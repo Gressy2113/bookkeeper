@@ -7,7 +7,7 @@ class TableModel(QtCore.QAbstractTableModel):
     Общая модель таблицы в основном окне
     """
 
-    def __init__(self, data):
+    def __init__(self, data, *args):
         super(TableModel, self).__init__()
         self._data = data
         self.header_names = list(data[0].__dataclass_fields__.keys())
@@ -36,29 +36,35 @@ class TableModel(QtCore.QAbstractTableModel):
 
 
 # class BugdetTableModel(TableModel):
-#     # def setData(self, index, value, role):
-#     #     if role == QtCore.Qt.EditRole:
-#     #         print(self._data)
-#     #         self._data.update_budget(index.row(), value)
-#     #         # print(index.row(), index.column(), value)
+#     def __init__(self, data, db_file):
+#         super().__init__(self, data)
+#         print("here")
+#         self.db_file = db_file
 
-#     #         # self._data.add()
-#     #         # self._data[index.row()][index.column()] = value
-#     #         # self.dataChanged.emit(index, index)
+#     def setData(self, index, value, role):
+#         if role == QtCore.Qt.EditRole:
+#             print(self.db_file)
 
-#     #         return True
+#             self.db_file.update_budget(index.row(), value)
+#             # print(index.row(), index.column(), value)
 
-#     #     return False
+#             # self._data.add()
+#             # self._data[index.row()][index.column()] = value
+#             # self.dataChanged.emit(index, index)
 
-#     def flags(self, index):
-#         fl = QtCore.QAbstractTableModel.flags(self, index)
-#         if index.column() == 2:
-#             fl |= (
-#                 QtCore.Qt.ItemIsEditable
-#                 | QtCore.Qt.ItemIsEnabled
-#                 | QtCore.Qt.ItemIsSelectable
-#             )
-#         return fl
+#             return True
+
+#         return False
+
+# def flags(self, index):
+#     fl = QtCore.QAbstractTableModel.flags(self, index)
+#     if index.column() == 2:
+#         fl |= (
+#             QtCore.Qt.ItemIsEditable
+#             | QtCore.Qt.ItemIsEnabled
+#             | QtCore.Qt.ItemIsSelectable
+#         )
+#     return fl
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -79,36 +85,71 @@ class MainWindow(QtWidgets.QMainWindow):
         self.budget_grid = QtWidgets.QTableView()
         self.item_model_budget = None
         self.layout.addWidget(self.budget_grid)
+
+        self.layout.addWidget(QtWidgets.QLabel("Изменение расходов"))
+
         self.width = None
         fixedwidth0 = 350
-        self.bottom_controls = QtWidgets.QGridLayout()
-        self.bottom_controls.addWidget(QtWidgets.QLabel("Сумма"), 1, 0)
+
+        self.middle_controls = QtWidgets.QGridLayout()
+        self.middle_controls.addWidget(QtWidgets.QLabel("Сумма"), 1, 0)
         self.amount_line_edit = QtWidgets.QLineEdit()
         self.amount_line_edit.setFixedWidth(fixedwidth0)
 
-        self.bottom_controls.addWidget(
+        self.middle_controls.addWidget(
             self.amount_line_edit, 1, 1
         )  # TODO: добавить валидатор
 
-        self.bottom_controls.addWidget(QtWidgets.QLabel("Категория"), 0, 0)
+        self.middle_controls.addWidget(QtWidgets.QLabel("Категория"), 0, 0)
         self.category_dropdown = QtWidgets.QComboBox()
-        self.bottom_controls.addWidget(self.category_dropdown, 0, 1)
+        self.middle_controls.addWidget(self.category_dropdown, 0, 1)
 
-        # self.bottom_controls = QtWidgets.QGridLayout()
-        self.bottom_controls.addWidget(QtWidgets.QLabel("Комментарий"), 2, 0)
+        # self.middle_controls = QtWidgets.QGridLayout()
+        self.middle_controls.addWidget(QtWidgets.QLabel("Комментарий"), 2, 0)
         self.comment_line_edit = QtWidgets.QLineEdit()
         self.comment_line_edit.setFixedWidth(fixedwidth0)
-        self.bottom_controls.addWidget(self.comment_line_edit, 2, 1)
+        self.middle_controls.addWidget(self.comment_line_edit, 2, 1)
 
         self.category_edit_button = QtWidgets.QPushButton("Редактировать категории")
-        self.bottom_controls.addWidget(self.category_edit_button, 0, 2)
+        self.middle_controls.addWidget(self.category_edit_button, 0, 2)
         self.category_edit_button.clicked.connect(self.show_cats_dialog)
 
         self.expense_add_button = QtWidgets.QPushButton("Добавить расход")
-        self.bottom_controls.addWidget(self.expense_add_button, 3, 0, 3, 2)
+        self.middle_controls.addWidget(self.expense_add_button, 3, 0, 3, 2)
 
         self.expense_delete_button = QtWidgets.QPushButton("Удалить выбранный\nрасход")
-        self.bottom_controls.addWidget(self.expense_delete_button, 1, 2, 3, 1)
+        self.middle_controls.addWidget(self.expense_delete_button, 1, 2, 3, 1)
+
+        self.middle_widget = QtWidgets.QWidget()
+        self.middle_widget.setLayout(self.middle_controls)
+
+        self.layout.addWidget(self.middle_widget)
+        #####
+
+        self.layout.addWidget(QtWidgets.QLabel("Изменение бюджета"))
+
+        self.bottom_controls = QtWidgets.QGridLayout()
+
+        self.bottom_controls.addWidget(QtWidgets.QLabel("На день"), 1, 0)
+        self.day_line_edit = QtWidgets.QLineEdit()
+        self.day_line_edit.setFixedWidth(fixedwidth0)
+        self.bottom_controls.addWidget(self.day_line_edit, 1, 1)
+        self.budget_day_button = QtWidgets.QPushButton("Принять")
+        self.bottom_controls.addWidget(self.budget_day_button, 1, 2)
+
+        self.bottom_controls.addWidget(QtWidgets.QLabel("На неделю"), 2, 0)
+        self.week_line_edit = QtWidgets.QLineEdit()
+        self.week_line_edit.setFixedWidth(fixedwidth0)
+        self.bottom_controls.addWidget(self.week_line_edit, 2, 1)
+        self.budget_week_button = QtWidgets.QPushButton("Принять")
+        self.bottom_controls.addWidget(self.budget_week_button, 2, 2)
+
+        self.bottom_controls.addWidget(QtWidgets.QLabel("На месяц"), 3, 0)
+        self.month_line_edit = QtWidgets.QLineEdit()
+        self.month_line_edit.setFixedWidth(fixedwidth0)
+        self.bottom_controls.addWidget(self.month_line_edit, 3, 1)
+        self.budget_month_button = QtWidgets.QPushButton("Принять")
+        self.bottom_controls.addWidget(self.budget_month_button, 3, 2)
 
         self.bottom_widget = QtWidgets.QWidget()
         self.bottom_widget.setLayout(self.bottom_controls)
@@ -134,8 +175,11 @@ class MainWindow(QtWidgets.QMainWindow):
                     for x in range(0, self.item_model_expense.columnCount(0) + 1)
                 ]
             )
+            self.expenses_grid.horizontalHeader().setSectionResizeMode(
+                4, QtWidgets.QHeaderView.Stretch
+            )
             self.width = grid_width + 60
-            self.setFixedSize(grid_width + 60, 600)
+            self.setFixedSize(grid_width + 60, 800)
 
     def set_budget_table(self, data):
         if data:
@@ -161,8 +205,26 @@ class MainWindow(QtWidgets.QMainWindow):
     def on_expense_delete_button_clicked(self, slot):
         self.expense_delete_button.clicked.connect(slot)
 
+    def on_budget_day_button_clicked(self, slot):
+        self.budget_day_button.clicked.connect(slot)
+
+    def on_budget_week_button_clicked(self, slot):
+        self.budget_week_button.clicked.connect(slot)
+
+    def on_budget_month_button_clicked(self, slot):
+        self.budget_month_button.clicked.connect(slot)
+
     def get_amount(self) -> float:
         return float(self.amount_line_edit.text())  # TODO: обработка исключений
+
+    def get_day_budget(self) -> float:
+        return float(self.day_line_edit.text())
+
+    def get_week_budget(self) -> float:
+        return float(self.week_line_edit.text())  # TODO: обработка исключений
+
+    def get_month_budget(self) -> float:
+        return float(self.month_line_edit.text())  # TODO: обработка исключений
 
     def get_comment(self) -> float:
         return self.comment_line_edit.text()
