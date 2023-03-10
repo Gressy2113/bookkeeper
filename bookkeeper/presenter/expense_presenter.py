@@ -1,8 +1,4 @@
 from bookkeeper.models.expense import Expense
-from bookkeeper.models.budget import Budget
-
-
-# from bookkeeper.view.categories_view import EditCategoryWindow
 
 
 class ExpensePresenter:
@@ -17,6 +13,13 @@ class ExpensePresenter:
         self.bud_repo = bud_repo
 
         self.view.on_expense_add_button_clicked(self.handle_expense_add_button_clicked)
+        self.view.on_expense_delete_button_clicked(
+            self.handle_expense_delete_button_clicked
+        )
+
+        self.view.on_category_edit_button_clicked(
+            self.handle_category_edit_button_clicked
+        )
         self.view.on_category_edit_button_clicked(
             self.handle_category_edit_button_clicked
         )
@@ -33,7 +36,6 @@ class ExpensePresenter:
 
     def update_budget_data(self):
         self.bud_data = self.bud_repo.get_all()
-        # print(self.bud_data)
         self.view.set_budget_table(self.bud_data)
 
     def show(self):
@@ -45,11 +47,24 @@ class ExpensePresenter:
     def handle_expense_add_button_clicked(self) -> None:
         cat_pk = self.view.get_selected_cat()
         amount = self.view.get_amount()
-        exp = Expense(int(amount), cat_pk)
+        comment = self.view.get_comment()
+        exp = Expense(int(amount), cat_pk, comment=comment)
         self.exp_repo.add(exp)
         self.bud_repo.create_update_budget_table()
         self.update_expense_data()
         self.update_budget_data()
+
+    def handle_expense_delete_button_clicked(self) -> None:
+        selected = self.view.get_selected_expenses()
+        if selected:
+            for e in selected:
+                self.exp_repo.delete(e)
+            self.bud_repo.create_update_budget_table()
+            self.update_expense_data()
+            self.update_budget_data()
+
+    # def handle_budget_edit_clicked(self) -> None:
+    #     value = self.view.get_
 
     def handle_category_edit_button_clicked(self):
         self.view.show_cats_dialog(self.cat_data)

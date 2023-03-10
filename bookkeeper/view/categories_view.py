@@ -1,22 +1,12 @@
 from collections import deque
-import sys
 from PySide6.QtWidgets import QTreeView, QVBoxLayout
 from PySide6.QtGui import QStandardItem, QStandardItemModel
-
-# from bookkeeper.models.category import Category
-
-# from bookkeeper.repository.sqlite_repository import SQLiteRepository
-from PySide6.QtWidgets import *
-
-# from PySide6.QtGui import *
-
-# from PySide6 import QtWidgets
+from PySide6.QtWidgets import QDialog, QDialogButtonBox
 
 
 class CategoryDialog(QDialog):
     def __init__(self, data):
         super().__init__()
-        # QBtn = QDialogButtonBox.Ok.se |
         self.buttonBox = QDialogButtonBox()
         self.buttonBox.addButton(QDialogButtonBox.Ok)
 

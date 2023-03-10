@@ -4,7 +4,7 @@ from bookkeeper.presenter.expense_presenter import ExpensePresenter
 from bookkeeper.models.category import Category
 from bookkeeper.models.expense import Expense
 from bookkeeper.models.budget import Budget
-from bookkeeper.repository.sqlite_repository import SQLiteRepository, Budget_Table
+from bookkeeper.repository.sqlite_repository import SQLiteRepository, BudgetTable
 import sys
 
 DB_NAME = "test.db"
@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     cat_repo = SQLiteRepository[Category](DB_NAME, Category)
     exp_repo = SQLiteRepository[Expense](DB_NAME, Expense)
-    budget_repo = Budget_Table(DB_NAME, Budget)
+    budget_repo = BudgetTable(DB_NAME, Budget)
     window = ExpensePresenter(model, view, cat_repo, exp_repo, budget_repo)
     window.show()
-    app.exec_()
+    app.exec()

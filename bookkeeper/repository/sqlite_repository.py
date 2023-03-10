@@ -26,23 +26,25 @@ class SQLiteRepository(AbstractRepository[T]):
             db_tables = [t[0].lower() for t in res.fetchall()]
             if self.table_name not in db_tables:
                 col_names = ", ".join(self.fields.keys())
-                q = (
+                request = (
                     f"CREATE TABLE {self.table_name} ("
                     f'"pk" INTEGER PRIMARY KEY AUTOINCREMENT, {col_names})'
                 )
-                cur.execute(q)
+                cur.execute(request)
         con.close()
         # self.create_update_budget_table()
 
     def add(self, obj: T) -> int:
         """Добавить объект"""
         names = ", ".join(self.fields.keys())
-        p = ", ".join("?" * len(self.fields))
+        sep = ", ".join("?" * len(self.fields))
         values = [getattr(obj, x) for x in self.fields]
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
             cur.execute("PRAGMA foreign_keys = ON")
-            cur.execute(f"INSERT INTO {self.table_name} ({names}) VALUES ({p})", values)
+            cur.execute(
+                f"INSERT INTO {self.table_name} ({names}) VALUES ({sep})", values
+            )
             pk = cur.lastrowid
             assert isinstance(pk, int)
             obj.pk = pk
@@ -111,21 +113,36 @@ class SQLiteRepository(AbstractRepository[T]):
         """Удалить запись"""
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
-            cur.execute("PRAGMA foreign_keys = ON")
             cur.execute(f"DELETE FROM {self.table_name} WHERE pk={pk}")
         con.close()
 
 
-class Budget_Table(SQLiteRepository):
-    def create_update_budget_table(self):
-        intervals = ["День", "Неделя", "Месяц"]
-        patterns = [
-            "datetime('now', 'start of day')",
-            "date('now', 'Weekday 1', '-7 days')",
-            "datetime('now', 'start of month')",
-        ]
+class BudgetTable(SQLiteRepository):
+    """
+    Репозиторий для создания и обновления таблицы бюджета в базе данных
+    """
 
-        for interval, pattern in zip(intervals, patterns):
+    intervals = ["День", "Неделя", "Месяц"]
+    patterns = [
+        "datetime('now', 'start of day')",
+        "date('now', 'Weekday 1', '-7 days')",
+        "datetime('now', 'start of month')",
+    ]
+
+    def __init__(self, db_file: str, cls: type):
+        super().__init__(db_file, cls)
+        self.create_update_budget_table()
+
+    def create_update_budget_table(self):
+        """
+        Создание и обновление расходов в таблице бюджета.
+        День - расходы за сегодня
+        Неделя - расходы за эту неделю (начиная с последнего пн)
+        Месяц - расходы с 1 числа текущего месяца
+
+        """
+
+        for interval, pattern in zip(self.intervals, self.patterns):
             with sqlite3.connect(self.db_file) as con:
                 cur = con.cursor()
                 cur.execute(f"SELECT * FROM budget WHERE interval='{interval}'")
@@ -134,7 +151,7 @@ class Budget_Table(SQLiteRepository):
                     f"SELECT amount FROM Expense WHERE expense_date >= {pattern}"
                 )
                 ams = cur.fetchall()
-                summ = sum([float(am[0]) for am in ams])
+                summ = sum((float(am[0]) for am in ams))
                 if ispresent is None:
                     self.add(Budget(interval=interval, summ=summ, budget=0, pk=0))
                 else:
@@ -142,3 +159,11 @@ class Budget_Table(SQLiteRepository):
                         f"UPDATE budget SET summ={summ} WHERE interval='{interval}'"
                     )
             con.close()
+
+    # def update_budget(self, ind, value):
+    #     with sqlite3.connect(self.db_file) as con:
+    #         cur = con.cursor()
+    #         cur.execute(
+    #             f"UPDATE budget SET budget = {value} WHERE interval = {self.intervals[ind]}"
+    #         )
+    #     con.close()
