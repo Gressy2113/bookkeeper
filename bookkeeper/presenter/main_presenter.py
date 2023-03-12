@@ -1,7 +1,7 @@
 from bookkeeper.models.expense import Expense
 
 
-class ExpensePresenter:
+class MainPresenter:
     def __init__(self, model, view, cat_repo, exp_repo, bud_repo):
         self.model = model
         self.view = view
@@ -11,6 +11,7 @@ class ExpensePresenter:
         )  # TODO: implement update_cat_data() similar to update_expense_data()
         self.exp_repo = exp_repo
         self.bud_repo = bud_repo
+        self.cat_repo = cat_repo
 
         self.view.on_expense_add_button_clicked(self.handle_expense_add_button_clicked)
         self.view.on_expense_delete_button_clicked(
@@ -27,10 +28,6 @@ class ExpensePresenter:
             self.handle_category_edit_button_clicked
         )
 
-        # self.view.on_category_edit_button_clicked(
-        #     self.handle_category_edit_button_clicked
-        # )
-
     def update_expense_data(self):
         self.exp_data = self.exp_repo.get_all()
         for e in self.exp_data:
@@ -45,11 +42,15 @@ class ExpensePresenter:
         self.bud_data = self.bud_repo.get_all()
         self.view.set_budget_table(self.bud_data)
 
+    def update_cat_data(self):
+        self.cat_data = self.cat_repo.get_all()
+        self.view.set_category_dropdown(self.cat_data)
+
     def show(self):
-        self.view.show()
         self.update_expense_data()
         self.update_budget_data()
-        self.view.set_category_dropdown(self.cat_data)
+        self.update_cat_data()
+        self.view.show()
 
     def handle_expense_add_button_clicked(self) -> None:
         cat_pk = self.view.get_selected_cat()
@@ -86,4 +87,5 @@ class ExpensePresenter:
         self.update_budget_data()
 
     def handle_category_edit_button_clicked(self):
-        self.view.show_cats_dialog(self.cat_data)
+        self.view.show_cats_dialog(self.cat_repo)
+        self.update_cat_data()

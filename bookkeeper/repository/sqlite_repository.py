@@ -41,7 +41,7 @@ class SQLiteRepository(AbstractRepository[T]):
         values = [getattr(obj, x) for x in self.fields]
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
-            cur.execute("PRAGMA foreign_keys = ON")
+            cur.execute("PRAGMA foreign_keys = 0")
             cur.execute(
                 f"INSERT INTO {self.table_name} ({names}) VALUES ({sep})", values
             )
@@ -102,11 +102,28 @@ class SQLiteRepository(AbstractRepository[T]):
 
         return [self.__generate_object(row) for row in res]
 
+    # def update(self, obj: T) -> None:
+    #     """Обновить данные об объекте. Объект должен содержать поле pk."""
+    #     with sqlite3.connect(self.db_file) as con:
+    #         cur = con.cursor()
+    #         cur.execute(f"UPDATE * FROM {self.table_name} WHERE pk={obj.pk}")
+    #         # cur.execute(f"UPDATE {self.table_name}  WHERE pk={obj.pk}")
+    #     con.close()
     def update(self, obj: T) -> None:
-        """Обновить данные об объекте. Объект должен содержать поле pk."""
+        if obj.pk == 0:
+            raise ValueError("attempt to update object with unknown primary key")
+
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
-            cur.execute(f"UPDATE * FROM {self.table_name} WHERE pk={obj.pk}")
+            cur.execute("PRAGMA foreign_keys = ON")
+            names = list(self.fields.keys())
+            values = [getattr(obj, x) for x in self.fields]
+            update_command = (
+                f"UPDATE {self.table_name} SET "
+                + ", ".join([f"{name} = ?" for name in names])
+                + " WHERE pk = ?"
+            )
+            cur.execute(update_command, values + [obj.pk])
         con.close()
 
     def delete(self, pk: int) -> None:
@@ -161,9 +178,10 @@ class BudgetTable(SQLiteRepository):
             con.close()
 
     def update_budget(self, ind, value):
+        """Обновление ограничения бюджета"""
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
             cur.execute(
-                f"UPDATE budget SET budget = {value} WHERE interval = '{self.intervals[ind]}'"
+                f"UPDATE budget SET budget={value} WHERE interval='{self.intervals[ind]}'"
             )
         con.close()

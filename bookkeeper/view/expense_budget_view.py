@@ -35,38 +35,6 @@ class TableModel(QtCore.QAbstractTableModel):
         return len(self._data[0].__dataclass_fields__)
 
 
-# class BugdetTableModel(TableModel):
-#     def __init__(self, data, db_file):
-#         super().__init__(self, data)
-#         print("here")
-#         self.db_file = db_file
-
-#     def setData(self, index, value, role):
-#         if role == QtCore.Qt.EditRole:
-#             print(self.db_file)
-
-#             self.db_file.update_budget(index.row(), value)
-#             # print(index.row(), index.column(), value)
-
-#             # self._data.add()
-#             # self._data[index.row()][index.column()] = value
-#             # self.dataChanged.emit(index, index)
-
-#             return True
-
-#         return False
-
-# def flags(self, index):
-#     fl = QtCore.QAbstractTableModel.flags(self, index)
-#     if index.column() == 2:
-#         fl |= (
-#             QtCore.Qt.ItemIsEditable
-#             | QtCore.Qt.ItemIsEnabled
-#             | QtCore.Qt.ItemIsSelectable
-#         )
-#     return fl
-
-
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
@@ -104,7 +72,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.category_dropdown = QtWidgets.QComboBox()
         self.middle_controls.addWidget(self.category_dropdown, 0, 1)
 
-        # self.middle_controls = QtWidgets.QGridLayout()
         self.middle_controls.addWidget(QtWidgets.QLabel("Комментарий"), 2, 0)
         self.comment_line_edit = QtWidgets.QLineEdit()
         self.comment_line_edit.setFixedWidth(fixedwidth0)
@@ -196,6 +163,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.budget_grid.setFixedHeight(100)
 
     def set_category_dropdown(self, data):
+        self.category_dropdown.clear()
         for c in data:
             self.category_dropdown.addItem(c.name, c.pk)
 
@@ -245,26 +213,15 @@ class MainWindow(QtWidgets.QMainWindow):
             return None
         return [self.item_model_expense._data[i].pk for i in idx]
 
-    # def renameSection(self, index):
-    #     oldTitle = self.model.headerData(
-    #         index, QtCore.Qt.Horizontal, QtCore.Qt.DisplayRole)
-
-    #     newTitle, accepted = QtWidgets.QInputDialog.getText(
-    #         self, 'Change column title', oldTitle)
-
-    #     if accepted and oldTitle != newTitle:
-    #         self.model.setHeaderData(
-    #             index, QtCore.Qt.Horizontal, newTitle, QtCore.Qt.DisplayRole)
-
     def get_selected_cat(self) -> int:
         return self.category_dropdown.itemData(self.category_dropdown.currentIndex())
 
     def on_category_edit_button_clicked(self, slot):
         self.category_edit_button.clicked.connect(slot)
 
-    def show_cats_dialog(self, data):
-        if data:
-            cat_dlg = CategoryDialog(data)
+    def show_cats_dialog(self, repo):
+        if repo:
+            cat_dlg = CategoryDialog(repo)
             cat_dlg.setWindowTitle("Редактирование категорий")
             cat_dlg.setGeometry(300, 100, 600, 300)
-            cat_dlg.exec_()
+            cat_dlg.exec()

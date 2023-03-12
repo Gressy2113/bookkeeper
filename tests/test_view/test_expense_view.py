@@ -1,4 +1,4 @@
-from bookkeeper.view.expense_view import MainWindow
+from bookkeeper.view.expense_budget_view import MainWindow
 
 
 def test_input_expence(qtbot):
