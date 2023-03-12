@@ -19,9 +19,6 @@ class TableModel(QtCore.QAbstractTableModel):
 
     def data(self, index, role):
         if role == QtCore.Qt.DisplayRole:
-            # See below for the nested-list data structure.
-            # .row() indexes into the outer list,
-            # .column() indexes into the sub-list
             fields = list(self._data[index.row()].__dataclass_fields__.keys())
             return self._data[index.row()].__getattribute__(fields[index.column()])
 
