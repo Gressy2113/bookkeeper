@@ -4,7 +4,7 @@
 
 import sqlite3
 from inspect import get_annotations
-from typing import Any
+from typing import Any, Tuple
 from bookkeeper.models.budget import Budget
 from bookkeeper.repository.abstract_repository import AbstractRepository, T
 
@@ -51,7 +51,7 @@ class SQLiteRepository(AbstractRepository[T]):
         con.close()
         return obj.pk
 
-    def __generate_object(self, db_row: tuple) -> T:
+    def __generate_object(self, db_row: Tuple[Any, ...]) -> T | Any:
         obj = self.cls(self.fields)
         for field, value in zip(self.fields, db_row[1:]):
             setattr(obj, field, value)
@@ -127,13 +127,13 @@ class SQLiteRepository(AbstractRepository[T]):
         con.close()
 
 
-class BudgetTable(SQLiteRepository):
+class BudgetTable(SQLiteRepository[Budget]):
     """
     Репозиторий для создания и обновления таблицы бюджета в базе данных
     """
 
-    intervals = ["День", "Неделя", "Месяц"]
-    patterns = [
+    intervals: list[str] = ["День", "Неделя", "Месяц"]
+    patterns: list[str] = [
         "datetime('now', 'start of day')",
         "date('now', 'Weekday 1', '-7 days')",
         "datetime('now', 'start of month')",
@@ -143,7 +143,7 @@ class BudgetTable(SQLiteRepository):
         super().__init__(db_file, cls)
         self.create_update_budget_table()
 
-    def create_update_budget_table(self):
+    def create_update_budget_table(self) -> None:
         """
         Создание и обновление расходов в таблице бюджета.
         День - расходы за сегодня
@@ -170,7 +170,7 @@ class BudgetTable(SQLiteRepository):
                     )
             con.close()
 
-    def update_budget(self, ind, value):
+    def update_budget(self, ind: int, value: float) -> None:
         """Обновление ограничения бюджета"""
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
