@@ -102,13 +102,6 @@ class SQLiteRepository(AbstractRepository[T]):
 
         return [self.__generate_object(row) for row in res]
 
-    # def update(self, obj: T) -> None:
-    #     """Обновить данные об объекте. Объект должен содержать поле pk."""
-    #     with sqlite3.connect(self.db_file) as con:
-    #         cur = con.cursor()
-    #         cur.execute(f"UPDATE * FROM {self.table_name} WHERE pk={obj.pk}")
-    #         # cur.execute(f"UPDATE {self.table_name}  WHERE pk={obj.pk}")
-    #     con.close()
     def update(self, obj: T) -> None:
         if obj.pk == 0:
             raise ValueError("attempt to update object with unknown primary key")
